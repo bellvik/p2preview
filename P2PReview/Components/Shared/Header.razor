@@ -1,0 +1,33 @@
+﻿@using P2PReview.Client.Models
+
+<header class="app-header">
+    <div class="header-left">
+        <div class="logo">
+            <i class="fas fa-code-branch"></i>
+            <span>p2p review</span>
+        </div>
+    </div>
+
+    <div class="header-right">
+        <div class="xp-badge">
+            <i class="fas fa-star"></i>
+            <span>@CurrentUser?.XP.ToString("N0") XP</span>
+        </div>
+
+        <div class="notifications">
+            <i class="fas fa-bell"></i>
+            <span class="badge">3</span>
+        </div>
+
+        <div class="user-profile">
+            <div class="user-icon-circle">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </div>
+</header>
+
+@code {
+    [Parameter] public User? CurrentUser { get; set; }
+}

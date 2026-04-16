@@ -1,0 +1,29 @@
+﻿# Build results
+[Bb]in/
+[Oo]bj/
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.meta
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# Blazor WebAssembly
+wwwroot/_framework/
+
+# Environment files
+appsettings*.local.json
+*.env
+
+# Logs
+*.log
+logs/

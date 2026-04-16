@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35806.99
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "P2PReview", "P2PReview\P2PReview.csproj", "{BA57FADC-8C8B-4DE8-B13C-9153F0107D2E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "P2PReview.Client", "P2PReview.Client\P2PReview.Client.csproj", "{FF6F0945-E95D-4AC5-9D38-91D6FC4A595A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BA57FADC-8C8B-4DE8-B13C-9153F0107D2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA57FADC-8C8B-4DE8-B13C-9153F0107D2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA57FADC-8C8B-4DE8-B13C-9153F0107D2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA57FADC-8C8B-4DE8-B13C-9153F0107D2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF6F0945-E95D-4AC5-9D38-91D6FC4A595A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF6F0945-E95D-4AC5-9D38-91D6FC4A595A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF6F0945-E95D-4AC5-9D38-91D6FC4A595A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF6F0945-E95D-4AC5-9D38-91D6FC4A595A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {899B5F61-32C9-474A-A572-FA8AB7B581EB}
+	EndGlobalSection
+EndGlobal

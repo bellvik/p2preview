@@ -1,0 +1,121 @@
+﻿@using P2PReview.Client.Models
+
+<div class="repository-sidebar">
+    <div class="sidebar-header">
+        <h3>Добавить репозиторий</h3>
+        <button class="btn-add" title="Create New Repository">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
+
+    <div class="repo-section">
+        <div class="section-header" @onclick="ToggleInProgress">
+            <i class="fas fa-chevron-down"></i>
+            <span>В процессе</span>
+            <span class="count-badge">@InProgressCount</span>
+        </div>
+
+        @if (showInProgress)
+        {
+            <div class="repo-list">
+                @foreach (var repo in Repositories.Where(r => r.Status == RepoStatus.InProgress))
+                {
+                    <div class="repo-item" @onclick="() => OpenRepository(repo.Id)">
+                        <i class="@GetFolderIconClass(repo)"></i>
+                        <span class="repo-name">@repo.Name</span>
+                        <span class="file-count">@repo.FileCount Files</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="repo-section">
+        <div class="section-header" @onclick="ToggleAwaiting">
+            <i class="fas fa-chevron-down"></i>
+            <span>Ожидает ревью</span>
+            <span class="count-badge">@AwaitingCount</span>
+        </div>
+
+        @if (showAwaiting)
+        {
+            <div class="repo-list">
+                @foreach (var repo in Repositories.Where(r => r.Status == RepoStatus.PendingApproval || r.Status == RepoStatus.ReadyForReview))
+                {
+                    <div class="repo-item" @onclick="() => OpenRepository(repo.Id)">
+                        <i class="fas fa-check-circle"></i>
+                        <span class="repo-name">@repo.Name</span>
+                        <span class="status-badge @GetStatusClass(repo)">@GetStatusText(repo)</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="repo-section">
+        <div class="section-header" @onclick="ToggleCompleted">
+            <i class="fas fa-chevron-down"></i>
+            <span>Завершено</span>
+            <span class="count-badge">@CompletedCount</span>
+        </div>
+
+        @if (showCompleted)
+        {
+            <div class="repo-list">
+                @foreach (var repo in Repositories.Where(r => r.Status == RepoStatus.Completed))
+                {
+                    <div class="repo-item" @onclick="() => OpenRepository(repo.Id)">
+                        <i class="fas fa-archive"></i>
+                        <span class="repo-name">@repo.Name</span>
+                        <span class="review-status">Reviewed</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<Repository> Repositories { get; set; } = new();
+    [Parameter] public EventCallback<int> OnRepositoryClick { get; set; }
+
+    private bool showInProgress = true;
+    private bool showAwaiting = true;
+    private bool showCompleted = true;
+
+    private int InProgressCount => Repositories.Count(r => r.Status == RepoStatus.InProgress);
+    private int AwaitingCount => Repositories.Count(r => r.Status == RepoStatus.PendingApproval || r.Status == RepoStatus.ReadyForReview);
+    private int CompletedCount => Repositories.Count(r => r.Status == RepoStatus.Completed);
+
+    private void ToggleInProgress() => showInProgress = !showInProgress;
+    private void ToggleAwaiting() => showAwaiting = !showAwaiting;
+    private void ToggleCompleted() => showCompleted = !showCompleted;
+
+    private async Task OpenRepository(int repoId)
+    {
+        await OnRepositoryClick.InvokeAsync(repoId);
+    }
+
+    private string GetFolderIconClass(Repository repo) => repo.Language.ToLower() switch
+    {
+        "python" => "fab fa-python",
+        "javascript" => "fab fa-js",
+        "c++" => "fas fa-code",
+        "php" => "fab fa-php",
+        _ => "fas fa-folder"
+    };
+
+    private string GetStatusClass(Repository repo) => repo.Status switch
+    {
+        RepoStatus.PendingApproval => "pending",
+        RepoStatus.ReadyForReview => "ready",
+        _ => "default"
+    };
+
+    private string GetStatusText(Repository repo) => repo.Status switch
+    {
+        RepoStatus.PendingApproval => "Pending Approval",
+        RepoStatus.ReadyForReview => "Ready for Review",
+        _ => ""
+    };
+}

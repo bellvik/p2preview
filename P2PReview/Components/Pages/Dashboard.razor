@@ -1,0 +1,118 @@
+﻿@page "/"
+@using P2PReview.Client.Models
+@using P2PReview.Client.Services.Interfaces
+@using Microsoft.AspNetCore.Components
+@using P2PReview.Components.Shared
+@inject IReviewService ReviewService
+@inject IRepositoryService RepositoryService
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Dashboard - P2P Review</PageTitle>
+
+<div class="dashboard-wrapper">
+    <!-- Left Sidebar -->
+    <aside class="sidebar-left">
+        <div class="sidebar-section">
+            <div class="sidebar-header">
+                <h3>Мои проекты</h3>
+                <button class="btn-add-project" title="Создать проект">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            
+            <RepositorySidebar Repositories="@repositories" OnRepositoryClick="OpenRepository" />
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <h2 class="page-title">Назначенные вам ревью</h2>
+        
+        @if (isLoading)
+        {
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Загрузка...</span>
+            </div>
+        }
+        else if (reviews.Any())
+        {
+            <div class="reviews-list">
+                @foreach (var review in reviews)
+                {
+                    <div class="review-item">
+                        <div class="review-info">
+                            <h4 class="review-title">@review.ProjectName</h4>
+                            <div class="tech-badges">
+                                @foreach (var tech in review.Technologies)
+                                {
+                                    <span class="tech-badge @tech.ToLower()">
+                                        <i class="@GetTechIcon(tech)"></i>
+                                        @tech
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                        <button class="btn-review" @onclick="() => StartReview(review.Id)">
+                            @(review.IsStarted ? "Продолжить" : "Начать")
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p>Нет назначенных ревью 🎉</p>
+            </div>
+        }
+    </main>
+
+    <!-- Right Sidebar - Используем компонент Leaderboard -->
+    <aside class="sidebar-right">
+        <Leaderboard Users="@leaderboardUsers" CurrentUser="@currentUser" />
+     
+    </aside>
+</div>
+
+@code {
+    private List<Review> reviews = new();
+    private List<Repository> repositories = new();
+    private List<User> leaderboardUsers = new();
+    private User? currentUser;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        reviews = await ReviewService.GetAssignedReviewsAsync();
+        repositories = await RepositoryService.GetUserRepositoriesAsync();
+        leaderboardUsers = await UserService.GetTopReviewersAsync(10);
+        currentUser = await UserService.GetCurrentUserAsync();
+        isLoading = false;
+    }
+
+    private string GetTechIcon(string tech) => tech.ToLower() switch
+    {
+        "python" => "fab fa-python",
+        "django" => "fas fa-globe",
+        "js" => "fab fa-js",
+        "node.js" => "fab fa-node",
+        "php" => "fab fa-php",
+        "laravel" => "fab fa-laravel",
+        "c++" => "fas fa-code",
+        "opencv" => "fas fa-eye",
+        _ => "fas fa-folder"
+    };
+
+    private async Task StartReview(int reviewId)
+    {
+        NavigationManager.NavigateTo($"/reviews/{reviewId}");
+    }
+
+    private async Task OpenRepository(int repoId)
+    {
+        NavigationManager.NavigateTo($"/projects/{repoId}");
+    }
+}

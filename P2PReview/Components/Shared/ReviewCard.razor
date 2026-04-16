@@ -1,0 +1,49 @@
+﻿@using P2PReview.Client.Models
+
+<div class="review-card">
+    <div class="review-header">
+        <h4>@Review.ProjectName</h4>
+        <div class="review-meta">
+            <span>@Review.FileCount Files</span>
+            <span class="due-date">Due in @Review.DueDays Days</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </div>
+
+    <div class="tech-stack">
+        @foreach (var tech in Review.Technologies)
+        {
+            <span class="tech-badge @tech.ToLower()">
+                <i class="@GetTechIconClass(tech)"></i>
+                @tech
+            </span>
+        }
+    </div>
+
+    <div class="review-actions">
+        <button class="btn btn-primary" @onclick="() => OnStartReview.InvokeAsync(Review.Id)">
+            @(Review.IsStarted ? "Continue" : "Start Review")
+        </button>
+        <button class="btn btn-secondary">
+            AI Suggestions
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Review Review { get; set; } = new();
+    [Parameter] public EventCallback<int> OnStartReview { get; set; }
+
+    private string GetTechIconClass(string tech) => tech.ToLower() switch
+    {
+        "python" => "fab fa-python",
+        "django" => "fas fa-globe",
+        "js" => "fab fa-js",
+        "node.js" => "fab fa-node-js",
+        "c++" => "fas fa-code",
+        "opencv" => "fas fa-eye",
+        "php" => "fab fa-php",
+        "laravel" => "fab fa-laravel",
+        _ => "fas fa-folder"
+    };
+}

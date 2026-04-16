@@ -1,0 +1,22 @@
+﻿@inherits LayoutComponentBase
+@using P2PReview.Client.Models
+@using P2PReview.Client.Services.Interfaces
+@inject IUserService UserService
+@using P2PReview.Components.Shared
+
+<div class="app-container">
+    <Header CurrentUser="@currentUser" />
+    
+    <div class="main-layout">
+        @Body
+    </div>
+</div>
+
+@code {
+    private User? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await UserService.GetCurrentUserAsync();
+    }
+}
