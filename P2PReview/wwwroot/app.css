@@ -992,19 +992,15 @@ h1:focus {
     position: relative;
     cursor: pointer;
     font-size: 20px;
-    padding: 8px;
-    border-radius: 50%;
-    transition: background 0.2s;
+    transition: opacity 0.2s;
 }
 
-    .notifications:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
+    
 
     .notifications .badge {
         position: absolute;
-        top: 4px;
-        right: 4px;
+        top: -8px;
+        right: -8px;
         background: #e53e3e;
         color: white;
         border-radius: 50%;
