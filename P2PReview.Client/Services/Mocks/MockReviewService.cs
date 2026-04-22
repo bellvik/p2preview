@@ -61,7 +61,14 @@ namespace P2PReview.Client.Services.Mocks
         public Task<Review?> GetReviewByIdAsync(int id)
         {
             var reviews = GetAssignedReviewsAsync().Result;
-            return Task.FromResult(reviews.FirstOrDefault(r => r.Id == id));
+            var review = reviews.FirstOrDefault(r => r.Id == id);
+
+            if (review != null)
+            {
+                review.RepoUrl = "https://github.com/example/repo";
+            }
+
+            return Task.FromResult(review);
         }
     }
 }

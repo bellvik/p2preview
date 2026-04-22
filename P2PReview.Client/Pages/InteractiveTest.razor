@@ -1,0 +1,29 @@
+﻿@page "/interactive-test"
+@rendermode InteractiveWebAssembly  
+@inject IJSRuntime JS
+
+<h1>🧪 Интерактивный тест</h1>
+
+<p>Счётчик: @count</p>
+
+<button @onclick="Increment" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 10px;">
+    ➕ Увеличить
+</button>
+
+<button @onclick="ShowAlert" style="padding: 12px 24px; background: #48bb78; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 10px;">
+    🔔 Показать alert
+</button>
+
+@code {
+    private int count = 0;
+    
+    private void Increment()
+    {
+        count++;
+    }
+    
+    private async Task ShowAlert()
+    {
+        await JS.InvokeVoidAsync("alert", $"Счётчик: {count}");
+    }
+}

@@ -11,5 +11,6 @@
         public string AuthorName { get; set; } = string.Empty;
         public string Language { get; set; } = string.Empty;
         public bool HasAIAnalysis { get; set; } = false;
+        public string? RepoUrl { get; set; }
     }
 }

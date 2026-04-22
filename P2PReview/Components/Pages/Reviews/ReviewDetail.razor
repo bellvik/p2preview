@@ -1,0 +1,289 @@
+﻿@page "/reviews/{ReviewId:int}"
+@using P2PReview.Client.Models
+@using Microsoft.AspNetCore.Components
+@using P2PReview.Client.Services.Interfaces
+@inject NavigationManager NavigationManager
+@inject IReviewService ReviewService
+
+<PageTitle>Code Review - P2P Review</PageTitle>
+
+<div class="review-page">
+    <!-- Header -->
+    <header class="review-header">
+        <div class="header-left">
+            <button class="btn-back" @onclick="GoBack">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div class="project-info">
+                <h1>@review?.ProjectName</h1>
+                <div class="project-meta">
+                    <span class="meta-item">
+                        <i class="fas fa-file-code"></i>
+                        @review?.FileCount файлов
+                    </span>
+                    <span class="meta-item">
+                        <i class="fas fa-clock"></i>
+                        Дней осталось: @review?.DueDays
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-outline" @onclick="SaveProgress">
+                <i class="fas fa-save"></i>
+                Сохранить
+            </button>
+            <button class="btn btn-primary" @onclick="CompleteReview">
+                <i class="fas fa-check"></i>
+                Завершить ревью
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="review-content">
+        <!-- Left Panel: Code Editor -->
+        <div class="code-panel">
+            <div class="code-header">
+                <h3>Backend-API auth-refactor</h3>
+                <div class="tech-stack">
+                    @if (review?.Technologies != null)
+                    {
+                        @foreach (var tech in review.Technologies)
+                        {
+                            <span class="tech-badge @tech.ToLower()">@tech</span>
+                        }
+                    }
+                </div>
+                <a href="@reviewRepoUrl" class="repo-link" target="_blank">
+                    <i class="fab fa-github"></i>
+                    github.com/example/repo
+                </a>
+            </div>
+
+            <div class="code-editor">
+                <div class="line-numbers">
+                    @for (int i = 1; i <= codeLines.Count; i++)
+                    {
+                        <div class="line-number @(i == selectedLine ? "selected" : "")"
+                             @onclick="() => SelectLine(i)">
+                            @i
+                        </div>
+                    }
+                </div>
+                <div class="code-content">
+                    @for (int i = 0; i < codeLines.Count; i++)
+                    {
+                        var lineNum = i + 1;
+                        <div class="code-line @(lineNum == selectedLine ? "selected" : "")"
+                             @onclick="() => SelectLine(lineNum)">
+                            <pre>@codeLines[i]</pre>
+                        </div>
+                    }
+                </div>
+
+                <!-- Comment Popup -->
+                @if (showCommentPopup && selectedLine > 0)
+                {
+                    <div class="comment-popup" style="top: @(selectedLine * 24 + 50)px; left: 400px;">
+                        <div class="popup-header">
+                            <span>Оставить комментарий</span>
+                            <button class="btn-close" @onclick="CloseCommentPopup">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <textarea @bind="commentText"
+                                  placeholder="Введите комментарий..."
+                                  rows="3"></textarea>
+                        <div class="comment-categories">
+                            @foreach (var cat in commentCategories)
+                            {
+                                <button class="category-btn @(selectedCategory == cat.Key ? "selected" : "")"
+                                        @onclick="() => SelectCategory(cat.Key)">
+                                    <i class="@cat.Value.Icon"></i>
+                                    @cat.Value.Label
+                                </button>
+                            }
+                        </div>
+                        <button class="btn btn-submit" @onclick="SubmitComment">
+                            <i class="fas fa-paper-plane"></i>
+                            Отправить
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Right Panel: Summary Review -->
+        <div class="summary-panel">
+            <h3>Summary-review</h3>
+
+            <div class="summary-section">
+                <label>Общая оценка архитектуры</label>
+                <textarea @bind="architectureComment"
+                          placeholder="Введите комментарий..."
+                          rows="3"></textarea>
+            </div>
+
+            <div class="summary-section">
+                <label>Оценка читаемости</label>
+                <div class="rating-slider">
+                    <input type="range" min="1" max="5" step="1" @bind="readabilityRating" />
+                    <div class="rating-labels">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span>@i</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-section">
+                <label>Оценка тестируемости</label>
+                <div class="rating-slider">
+                    <input type="range" min="1" max="5" step="1" @bind="testabilityRating" />
+                    <div class="rating-labels">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span>@i</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-section">
+                <label>Оценка масштабируемости</label>
+                <div class="rating-slider">
+                    <input type="range" min="1" max="5" step="1" @bind="scalabilityRating" />
+                    <div class="rating-labels">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span>@i</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-section">
+                <label>Оценка безопасности</label>
+                <div class="rating-slider">
+                    <input type="range" min="1" max="5" step="1" @bind="securityRating" />
+                    <div class="rating-labels">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span>@i</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-complete" @onclick="CompleteReview">
+                <i class="fas fa-check-circle"></i>
+                Завершить ревью
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int ReviewId { get; set; }
+
+    private Review? review;
+    private string reviewRepoUrl = "https://github.com/example/repo";
+    private bool showCommentPopup = false;
+    private int selectedLine = 0;
+    private string commentText = "";
+    private string selectedCategory = "";
+
+    private string architectureComment = "";
+    private int readabilityRating = 3;
+    private int testabilityRating = 3;
+    private int scalabilityRating = 3;
+    private int securityRating = 3;
+
+    private List<string> codeLines = new()
+    {
+        "def selection_sort(arr):",
+        "    for i in range(len(arr)):",
+        "        min_index = i",
+        "        for j in range(i + 1, len(arr)):",
+        "            if arr[j] < arr[min_index]:",
+        "                min_index = j",
+        "    if min_index != i:",
+        "        arr[i], arr[min_index] = arr[min_index], arr[i]",
+        "    return arr",
+        "",
+        "# Test the function",
+        "test_array = [64, 25, 12, 22, 11]",
+        "print(f'Original: {test_array}')",
+        "sorted_array = selection_sort(test_array)",
+        "print(f'Sorted: {sorted_array}')",
+        "",
+        "# Time Complexity: O(n²)",
+        "# Space Complexity: O(1)"
+    };
+
+    private Dictionary<string, (string Icon, string Label)> commentCategories = new()
+    {
+        { "bug", ("fas fa-bug", "Bug") },
+        { "performance", ("fas fa-tachometer-alt", "Performance") },
+        { "security", ("fas fa-shield-alt", "Security") },
+        { "architecture", ("fas fa-sitemap", "Architecture") },
+        { "codestyle", ("fas fa-code", "Code Style") },
+        { "bestpractice", ("fas fa-check-circle", "Best Practice") },
+        { "refactoring", ("fas fa-tools", "Refactoring") }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        review = await ReviewService.GetReviewByIdAsync(ReviewId);
+        if (review == null)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+    }
+
+    private void SelectLine(int lineNum)
+    {
+        selectedLine = lineNum;
+        showCommentPopup = true;
+    }
+
+    private void CloseCommentPopup()
+    {
+        showCommentPopup = false;
+        selectedLine = 0;
+        commentText = "";
+        selectedCategory = "";
+    }
+
+    private void SelectCategory(string category)
+    {
+        selectedCategory = category;
+    }
+
+    private async Task SubmitComment()
+    {
+        // TODO: Отправка комментария на сервер
+        await Task.Delay(100);
+        CloseCommentPopup();
+    }
+
+    private async Task SaveProgress()
+    {
+        // TODO: Сохранение прогресса
+        await Task.Yield();
+    }
+
+    private async Task CompleteReview()
+    {
+        // TODO: Завершение ревью
+        await Task.Yield();
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}
