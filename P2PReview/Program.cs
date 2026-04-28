@@ -16,6 +16,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddScoped<IReviewService, MockReviewService>();
 builder.Services.AddScoped<IRepositoryService, MockRepositoryService>();
 builder.Services.AddScoped<IUserService, MockUserService>();
+builder.Services.AddScoped<ICommentService, MockCommentService>();
 
 var app = builder.Build();
 

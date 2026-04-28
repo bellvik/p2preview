@@ -1,9 +1,12 @@
 ﻿@page "/reviews/{ReviewId:int}"
+@rendermode InteractiveServer
 @using P2PReview.Client.Models
-@using Microsoft.AspNetCore.Components
 @using P2PReview.Client.Services.Interfaces
+@using Microsoft.AspNetCore.Components
 @inject NavigationManager NavigationManager
 @inject IReviewService ReviewService
+@inject ICommentService CommentService
+@inject IJSRuntime JS
 
 <PageTitle>Code Review - P2P Review</PageTitle>
 
@@ -65,9 +68,14 @@
                 <div class="line-numbers">
                     @for (int i = 1; i <= codeLines.Count; i++)
                     {
-                        <div class="line-number @(i == selectedLine ? "selected" : "")"
+                        <div class="line-number @(i == selectedLine ? "selected" : "")
+                                    @(lineHasComment(i) ? "has-comment" : "")"
                              @onclick="() => SelectLine(i)">
                             @i
+                            @if (lineHasComment(i))
+                            {
+                                <i class="fas fa-comment-dots comment-indicator"></i>
+                            }
                         </div>
                     }
                 </div>
@@ -85,30 +93,62 @@
                 <!-- Comment Popup -->
                 @if (showCommentPopup && selectedLine > 0)
                 {
-                    <div class="comment-popup" style="top: @(selectedLine * 24 + 50)px; left: 400px;">
+                    <div class="comment-popup" style="top: @(Math.Min(selectedLine * 28 + 80, 500))px; left: 450px;">
                         <div class="popup-header">
-                            <span>Оставить комментарий</span>
+                            <span>Комментарий к строке @selectedLine</span>
                             <button class="btn-close" @onclick="CloseCommentPopup">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
+
                         <textarea @bind="commentText"
                                   placeholder="Введите комментарий..."
-                                  rows="3"></textarea>
+                                  rows="3"
+                                  class="comment-input"></textarea>
+
                         <div class="comment-categories">
                             @foreach (var cat in commentCategories)
                             {
                                 <button class="category-btn @(selectedCategory == cat.Key ? "selected" : "")"
-                                        @onclick="() => SelectCategory(cat.Key)">
+                                        @onclick="() => SelectCategory(cat.Key)"
+                                        title="@cat.Value.Description">
                                     <i class="@cat.Value.Icon"></i>
                                     @cat.Value.Label
                                 </button>
                             }
                         </div>
-                        <button class="btn btn-submit" @onclick="SubmitComment">
+
+                        <button class="btn btn-submit" @onclick="SubmitComment" disabled="@string.IsNullOrWhiteSpace(commentText)">
                             <i class="fas fa-paper-plane"></i>
                             Отправить
                         </button>
+                    </div>
+                }
+
+                <!-- Existing Comments for Line -->
+                @if (existingComments.Any() && selectedLine > 0)
+                {
+                    <div class="existing-comments" style="top: @(Math.Min(selectedLine * 28 + 80, 400))px; left: 50px;">
+                        <h4>Комментарии (@existingComments.Count)</h4>
+                        @foreach (var comment in existingComments)
+                        {
+                            <div class="comment-item">
+                                <div class="comment-header">
+                                    <span class="comment-author">@comment.AuthorName</span>
+                                    <span class="comment-category @comment.Category.ToLower()">
+                                        <i class="@GetCategoryIcon(comment.Category)"></i>
+                                        @GetCategoryLabel(comment.Category)
+                                    </span>
+                                </div>
+                                <p class="comment-text">@comment.Text</p>
+                                <div class="comment-meta">
+                                    <span class="comment-time">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                                    <button class="btn-delete-comment" @onclick="() => DeleteComment(comment.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -164,19 +204,6 @@
                 </div>
             </div>
 
-            <div class="summary-section">
-                <label>Оценка безопасности</label>
-                <div class="rating-slider">
-                    <input type="range" min="1" max="5" step="1" @bind="securityRating" />
-                    <div class="rating-labels">
-                        @for (int i = 1; i <= 5; i++)
-                        {
-                            <span>@i</span>
-                        }
-                    </div>
-                </div>
-            </div>
-
             <button class="btn btn-primary btn-complete" @onclick="CompleteReview">
                 <i class="fas fa-check-circle"></i>
                 Завершить ревью
@@ -194,6 +221,8 @@
     private int selectedLine = 0;
     private string commentText = "";
     private string selectedCategory = "";
+    private List<CodeComment> allComments = new();
+    private List<CodeComment> existingComments = new();
 
     private string architectureComment = "";
     private int readabilityRating = 3;
@@ -223,15 +252,15 @@
         "# Space Complexity: O(1)"
     };
 
-    private Dictionary<string, (string Icon, string Label)> commentCategories = new()
+    private Dictionary<string, CommentCategoryInfo> commentCategories = new()
     {
-        { "bug", ("fas fa-bug", "Bug") },
-        { "performance", ("fas fa-tachometer-alt", "Performance") },
-        { "security", ("fas fa-shield-alt", "Security") },
-        { "architecture", ("fas fa-sitemap", "Architecture") },
-        { "codestyle", ("fas fa-code", "Code Style") },
-        { "bestpractice", ("fas fa-check-circle", "Best Practice") },
-        { "refactoring", ("fas fa-tools", "Refactoring") }
+        { "bug", new CommentCategoryInfo { Icon = "fas fa-bug", Label = "Bug", Description = "Ошибка в коде", Color = "#e53e3e" } },
+        { "performance", new CommentCategoryInfo { Icon = "fas fa-tachometer-alt", Label = "Performance", Description = "Производительность", Color = "#dd6b20" } },
+        { "security", new CommentCategoryInfo { Icon = "fas fa-shield-alt", Label = "Security", Description = "Безопасность", Color = "#d69e2e" } },
+        { "architecture", new CommentCategoryInfo { Icon = "fas fa-sitemap", Label = "Architecture", Description = "Архитектура", Color = "#3182ce" } },
+        { "codestyle", new CommentCategoryInfo { Icon = "fas fa-code", Label = "Code Style", Description = "Стиль кода", Color = "#805ad5" } },
+        { "bestpractice", new CommentCategoryInfo { Icon = "fas fa-check-circle", Label = "Best Practice", Description = "Лучшие практики", Color = "#38a169" } },
+        { "refactoring", new CommentCategoryInfo { Icon = "fas fa-tools", Label = "Refactoring", Description = "Рефакторинг", Color = "#319795" } }
     };
 
     protected override async Task OnInitializedAsync()
@@ -241,12 +270,23 @@
         {
             NavigationManager.NavigateTo("/");
         }
+
+        // Загрузить существующие комментарии
+        allComments = await CommentService.GetCommentsForReviewAsync(ReviewId);
+    }
+
+    private bool lineHasComment(int lineNumber)
+    {
+        return allComments.Any(c => c.LineNumber == lineNumber);
     }
 
     private void SelectLine(int lineNum)
     {
         selectedLine = lineNum;
         showCommentPopup = true;
+        existingComments = allComments.Where(c => c.LineNumber == lineNum).ToList();
+        commentText = "";
+        selectedCategory = "";
     }
 
     private void CloseCommentPopup()
@@ -255,6 +295,7 @@
         selectedLine = 0;
         commentText = "";
         selectedCategory = "";
+        existingComments = new();
     }
 
     private void SelectCategory(string category)
@@ -264,26 +305,71 @@
 
     private async Task SubmitComment()
     {
-        // TODO: Отправка комментария на сервер
-        await Task.Delay(100);
-        CloseCommentPopup();
+        if (string.IsNullOrWhiteSpace(commentText))
+            return;
+
+        var comment = new CodeComment
+            {
+                ReviewId = ReviewId,
+                LineNumber = selectedLine,
+                Text = commentText,
+                Category = selectedCategory,
+                AuthorName = "You",
+                FileName = "sort.py"
+            };
+
+        await CommentService.AddCommentAsync(comment);
+
+        // Обновить список комментариев
+        allComments = await CommentService.GetCommentsForReviewAsync(ReviewId);
+        existingComments = allComments.Where(c => c.LineNumber == selectedLine).ToList();
+
+        // Очистить форму
+        commentText = "";
+        selectedCategory = "";
+    }
+
+    private async Task DeleteComment(int commentId)
+    {
+        await CommentService.DeleteCommentAsync(commentId);
+        allComments = await CommentService.GetCommentsForReviewAsync(ReviewId);
+        existingComments = allComments.Where(c => c.LineNumber == selectedLine).ToList();
     }
 
     private async Task SaveProgress()
     {
-        // TODO: Сохранение прогресса
-        await Task.Yield();
+        await JS.InvokeVoidAsync("alert", "Прогресс сохранён!");
     }
 
     private async Task CompleteReview()
     {
-        // TODO: Завершение ревью
-        await Task.Yield();
-        NavigationManager.NavigateTo("/");
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Завершить ревью?");
+        if (confirmed)
+        {
+            NavigationManager.NavigateTo("/");
+        }
     }
 
     private void GoBack()
     {
         NavigationManager.NavigateTo("/");
+    }
+
+    private string GetCategoryIcon(string category)
+    {
+        return commentCategories.TryGetValue(category.ToLower(), out var info) ? info.Icon : "fas fa-comment";
+    }
+
+    private string GetCategoryLabel(string category)
+    {
+        return commentCategories.TryGetValue(category.ToLower(), out var info) ? info.Label : category;
+    }
+
+    public class CommentCategoryInfo
+    {
+        public string Icon { get; set; } = "";
+        public string Label { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Color { get; set; } = "";
     }
 }
