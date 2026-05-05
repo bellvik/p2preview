@@ -1,0 +1,414 @@
+﻿@page "/projects/create"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Создать проект - P2P Review</PageTitle>
+
+<div class="create-project-page">
+    <div class="page-header">
+        <button class="btn-back" @onclick="GoBack">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1>Создание нового проекта</h1>
+    </div>
+
+    <div class="project-form">
+        <!-- Section 1: Project Info -->
+        <section class="form-section">
+            <h3 class="section-title">
+                <i class="fas fa-info-circle"></i>
+                Информация о проекте
+            </h3>
+
+            <div class="form-group">
+                <label class="form-label">
+                    Название проекта
+                    <span class="required">*</span>
+                </label>
+                <input @bind="projectInfo.Name" 
+                       class="form-control" 
+                       placeholder="Мой новый проект" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Описание</label>
+                <textarea @bind="projectInfo.Description" 
+                          class="form-control form-textarea" 
+                          placeholder="Краткое описание проекта"
+                          rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Стек технологий</label>
+                <select @bind="projectInfo.TechStack" class="form-control">
+                    <option value="">Выберите стек</option>
+                    <option value="python-django">Python + Django</option>
+                    <option value="python-flask">Python + Flask</option>
+                    <option value="javascript-node">JavaScript + Node.js</option>
+                    <option value="javascript-react">JavaScript + React</option>
+                    <option value="csharp-dotnet">C# + .NET</option>
+                    <option value="php-laravel">PHP + Laravel</option>
+                    <option value="cpp">C++</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Приватность</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio"
+                               name="privacy"
+                               value="false"
+                               checked="@(projectInfo.IsPrivate == false)"
+                               @onclick="() => projectInfo.IsPrivate = false" />
+                        <span class="radio-text">
+                            <i class="fas fa-globe"></i>
+                            Публичный
+                        </span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio"
+                               name="privacy"
+                               value="true"
+                               checked="@(projectInfo.IsPrivate == true)"
+                               @onclick="() => projectInfo.IsPrivate = true" />
+                        <span class="radio-text">
+                            <i class="fas fa-lock"></i>
+                            Приватный
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Code Upload -->
+        <section class="form-section">
+            <h3 class="section-title">
+                <i class="fas fa-upload"></i>
+                Загрузка кода
+            </h3>
+
+            <!-- Tabs -->
+            <div class="upload-tabs">
+                <button class="@GetTabClass("git")" @onclick="SetGitTab">
+                    <i class="fab fa-git-alt"></i>
+                    Git интеграция
+                </button>
+                <button class="@GetTabClass("manual")" @onclick="SetManualTab">
+                    <i class="fas fa-file-upload"></i>
+                    Ручная загрузка
+                </button>
+                <button class="@GetTabClass("paste")" @onclick="SetPasteTab">
+                    <i class="fas fa-paste"></i>
+                    Вставка кода
+                </button>
+            </div>
+
+            <!-- Git Integration Tab -->
+            @if (IsGitTab())
+            {
+                <div class="tab-content">
+                    <div class="form-group">
+                        <label class="form-label">URL репозитория</label>
+                        <input @bind="gitInfo.RepositoryUrl" 
+                               class="form-control" 
+                               placeholder="https://github.com/user/repo.git" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ветка</label>
+                        <input @bind="gitInfo.Branch" 
+                               class="form-control" 
+                               placeholder="main" />
+                    </div>
+                </div>
+            }
+
+            <!-- Manual Upload Tab -->
+            @if (IsManualTab())
+            {
+                <div class="tab-content">
+                    <div class="file-upload-area">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <p class="upload-text">Выберите файлы для загрузки</p>
+                        <button class="btn-upload" @onclick="SelectFiles">
+                            Выберите файлы
+                        </button>
+                        <InputFile @ref="fileInput" 
+                                   multiple 
+                                   style="display: none" 
+                                   OnChange="HandleFileSelect" />
+                        <p class="upload-hint">Поддерживаются: .py, .js, .cs, .java, .php, .cpp</p>
+                    </div>
+                    @if (uploadedFiles.Any())
+                    {
+                        <div class="uploaded-files">
+                            @foreach (var file in uploadedFiles)
+                            {
+                                <div class="file-item">
+                                    <i class="fas fa-file-code"></i>
+                                    <span>@file</span>
+                                    <button class="btn-remove-file" @onclick="() => RemoveFile(file)">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Paste Code Tab -->
+            @if (IsPasteTab())
+            {
+                <div class="tab-content">
+                    <div class="form-group">
+                        <label class="form-label">Язык</label>
+                        <select @bind="codeInfo.Language" class="form-control">
+                            <option value="python">Python</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="csharp">C#</option>
+                            <option value="java">Java</option>
+                            <option value="php">PHP</option>
+                            <option value="cpp">C++</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Имя файла</label>
+                        <input @bind="codeInfo.FileName" 
+                               class="form-control" 
+                               placeholder="example.py" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Код</label>
+                        <textarea @bind="codeInfo.Code" 
+                                  class="form-control code-editor-textarea" 
+                                  placeholder="Вставьте ваш код здесь..."
+                                  rows="10"></textarea>
+                    </div>
+                    <button class="btn-add-code" @onclick="AddCodeSnippet">
+                        <i class="fas fa-plus"></i>
+                        Добавить фрагмент
+                    </button>
+                    @if (codeSnippets.Any())
+                    {
+                        <div class="code-snippets">
+                            @foreach (var snippet in codeSnippets)
+                            {
+                                <div class="snippet-item">
+                                    <div class="snippet-header">
+                                        <span><i class="fas fa-file-code"></i> @snippet.FileName</span>
+                                        <button class="btn-remove-snippet" @onclick="() => RemoveSnippet(snippet)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <pre class="snippet-code">@snippet.Code</pre>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <!-- Section 3: Review Settings -->
+        <section class="form-section">
+            <h3 class="section-title">
+                <i class="fas fa-cog"></i>
+                Настройки ревью
+            </h3>
+
+            <div class="form-group">
+                <label class="form-label">Количество ревьюверов</label>
+                <select @bind="reviewSettings.ReviewerCount" class="form-control">
+                    <option value="1">1 ревьювер</option>
+                    <option value="2">2 ревьювера</option>
+                    <option value="3">3 ревьювера</option>
+                    <option value="4">4 ревьювера</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="reviewSettings.PublishPublicly" />
+                    <span class="checkbox-text">
+                        <i class="fas fa-share-alt"></i>
+                        Опубликовать в общем доступе
+                    </span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="reviewSettings.SetDeadline" />
+                    <span class="checkbox-text">
+                        <i class="fas fa-clock"></i>
+                        Дедлайн (опционально)
+                    </span>
+                </label>
+                @if (reviewSettings.SetDeadline)
+                {
+                    <div class="deadline-input">
+                        <input type="datetime-local" @bind="reviewSettings.Deadline" class="form-control" />
+                    </div>
+                }
+            </div>
+        </section>
+
+        <!-- Action Buttons -->
+        <div class="form-actions">
+            <button class="btn btn-cancel" @onclick="GoBack">
+                Отмена
+            </button>
+            <button class="btn btn-primary btn-submit" @onclick="SubmitProject" disabled="@(!IsValid())">
+                <i class="fas fa-paper-plane"></i>
+                Отправить на ревью
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string uploadTab = "paste";
+    private InputFile? fileInput;
+    
+    private ProjectInfo projectInfo = new();
+    private GitInfo gitInfo = new();
+    private CodeInfo codeInfo = new();
+    private ReviewSettings reviewSettings = new();
+    private void SetGitTab() => uploadTab = "git";
+    private void SetManualTab() => uploadTab = "manual";
+    private void SetPasteTab() => uploadTab = "paste";
+    private List<string> uploadedFiles = new();
+    private List<CodeSnippet> codeSnippets = new();
+
+    // ✅ Helper methods to avoid inline string comparison in Razor
+    private bool IsTabActive(string tab) => uploadTab == tab;
+    private bool IsGitTab() => uploadTab == "git";
+    private bool IsManualTab() => uploadTab == "manual";
+    private bool IsPasteTab() => uploadTab == "paste";
+
+    private void SetUploadTab(string tab)
+    {
+        uploadTab = tab;
+    }
+
+    private bool IsValid()
+    {
+        if (string.IsNullOrWhiteSpace(projectInfo.Name))
+            return false;
+
+        return uploadTab switch
+        {
+            "git" => !string.IsNullOrWhiteSpace(gitInfo.RepositoryUrl),
+            "manual" => uploadedFiles.Any(),
+            "paste" => !string.IsNullOrWhiteSpace(codeInfo.Code),
+            _ => false
+        };
+    }
+
+    private async Task SelectFiles()
+    {
+        await JS.InvokeVoidAsync("document.querySelector('input[type=file]').click()");
+    }
+
+    private Task HandleFileSelect(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            uploadedFiles.Add(file.Name);
+        }
+        return Task.CompletedTask;
+    }
+
+    private void RemoveFile(string fileName)
+    {
+        uploadedFiles.Remove(fileName);
+    }
+    private string GetTabClass(string tabName)
+    {
+        return $"tab-btn {(uploadTab == tabName ? "active" : "")}";
+    }
+
+    private void AddCodeSnippet()
+    {
+        if (!string.IsNullOrWhiteSpace(codeInfo.Code))
+        {
+            codeSnippets.Add(new CodeSnippet
+            {
+                FileName = string.IsNullOrWhiteSpace(codeInfo.FileName) ? $"code.{GetExtension(codeInfo.Language)}" : codeInfo.FileName,
+                Code = codeInfo.Code,
+                Language = codeInfo.Language
+            });
+            
+            codeInfo.Code = "";
+            codeInfo.FileName = "";
+        }
+    }
+
+    private void RemoveSnippet(CodeSnippet snippet)
+    {
+        codeSnippets.Remove(snippet);
+    }
+
+    private string GetExtension(string language) => language switch
+    {
+        "python" => "py",
+        "javascript" => "js",
+        "csharp" => "cs",
+        "java" => "java",
+        "php" => "php",
+        "cpp" => "cpp",
+        _ => "txt"
+    };
+
+    private async Task SubmitProject()
+    {
+        await JS.InvokeVoidAsync("alert", "Проект отправлен на ревью!");
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    public class ProjectInfo
+    {
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string TechStack { get; set; } = "";
+        public bool IsPrivate { get; set; } = true;
+    }
+
+    public class GitInfo
+    {
+        public string RepositoryUrl { get; set; } = "";
+        public string Branch { get; set; } = "main";
+        public string Token { get; set; } = "";
+    }
+
+    public class CodeInfo
+    {
+        public string Language { get; set; } = "python";
+        public string FileName { get; set; } = "";
+        public string Code { get; set; } = "";
+    }
+
+    public class ReviewSettings
+    {
+        public int ReviewerCount { get; set; } = 2;
+        public bool PublishPublicly { get; set; } = false;
+        public bool SetDeadline { get; set; } = false;
+        public DateTime Deadline { get; set; }
+    }
+
+    public class CodeSnippet
+    {
+        public string FileName { get; set; } = "";
+        public string Code { get; set; } = "";
+        public string Language { get; set; } = "";
+    }
+}
